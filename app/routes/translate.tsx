@@ -2,11 +2,11 @@ import type { Route } from "./+types/translate";
 import { TranslateForm } from "../translate/form";
 import Content from "view/components/Content";
 import Sidepane from "view/components/Sidepane";
-import { createDefaultFunTranslationService } from "io/service/FunTranslationService";
 import { useActionData } from "react-router";
 import type { ActionFunction } from "react-router";
 import type { Translation } from "domain/types/Translation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
+import { createCachedFunTranslationService } from "io/service/CacheService";
 
 
 export function meta({}: Route.MetaArgs) {
@@ -25,7 +25,7 @@ export const action: ActionFunction = async ({ request }) => {
     return { error: "Invalid input" };
   }
 
-  const translationService = createDefaultFunTranslationService();
+  const translationService = createCachedFunTranslationService();
   const translation = await translationService.getTranslation(text, engine);
 
   return translation;
@@ -37,8 +37,20 @@ export default function Translate() {
   const [history, setHistory] = useState<Translation[]>([]);
 
   useEffect(() => {
+    const storedHistory: string | null = typeof window !== "undefined" ? localStorage.getItem("translation-history") : null;
+    if (storedHistory) {
+      setHistory(JSON.parse(storedHistory));
+    }
+  }, []);
+
+  // Update history when new translation is received
+  useEffect(() => {
     if (newTranslation) {
-      setHistory((prev) => [...prev, newTranslation]);
+      setHistory((prev) => {
+        const updated = [...prev, newTranslation];
+        localStorage.setItem("translation-history", JSON.stringify(updated));
+        return updated;
+      });
     }
   }, [newTranslation]);
 
@@ -59,6 +71,16 @@ export default function Translate() {
             </li>
           ))}
         </ul>
+        {history.length > 0 && 
+          <button
+            onClick={() => {
+              setHistory([]);
+              localStorage.removeItem("translation-history");
+            }}
+            className="mt-4 text-sm text-red-500 hover:underline"
+          >
+            Clear History
+          </button>}
       </Sidepane>
       <Content>
         <TranslateForm />

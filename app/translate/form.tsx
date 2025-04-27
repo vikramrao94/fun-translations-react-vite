@@ -6,7 +6,7 @@ import Select from "view/components/Select";
 
 export function TranslateForm() {
   const navigation = useNavigation();
-  const isSubmitting = navigation.state === "submitting";
+  const isSubmitting:boolean = navigation.state === "submitting";
   const [text, setText] = useState<string>("");
 
   useEffect(() => {
